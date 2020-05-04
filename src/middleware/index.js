@@ -25,16 +25,22 @@ function SignIn(usr, pas){
         Username : usr,
         Pool : userPool
     })
+    //20200504
+    //dispLoading('ログイン中…');
     cognitoUser.authenticateUser(authenticationDetails, {
         onSuccess: function (authresult) {
             authtoken = authresult.getIdToken().getJwtToken();
             window.alert('ログインしました')
             var currenttime = new Date();
+            //removeLoading();
             //20200502 仕方ないのでここにチケット取得のところまで入力する
             getTickets(authresult.getIdToken().getJwtToken(), usr);
         }, onFailure: (err) => {
             return(err);
             console.log(err);
+            window.alert('ログインに失敗しました');
+            //removeLoading();
+
         }
     })
 }
@@ -113,9 +119,9 @@ function getTickets(token, usr) {
                //ここにticketsを登録するアクションを入れる
                console.log('new tickets got from API' + filterresults);
               }else{
-              	console.log('blank tickets');
-              	console.log(usr);
-              	console.log(token);
+                console.log('blank tickets');
+                console.log(usr);
+                console.log(token);
             }
               }
     })
@@ -128,6 +134,31 @@ function compare( a, b ){
   return r;
   }
 
+//loading effect function
+/* ------------------------------
+ Loading イメージ表示関数
+ 引数： msg 画面に表示する文言
+ ------------------------------ */
+    function dispLoading(msg){
+      // 引数なし（メッセージなし）を許容
+      if( msg == undefined ){
+        msg = "";
+      }
+      // 画面表示メッセージ
+      var dispMsg = "<div class='loadingMsg'>" + msg + "</div>";
+      // ローディング画像が表示されていない場合のみ出力
+      if($("#loading").length == 0){
+        $("body").append("<div id='loading'>" + dispMsg + "</div>");
+      }
+    }
+ 
+/* ------------------------------
+ Loading イメージ削除関数
+ ------------------------------ */
+    function removeLoading(){
+      $("#loading").remove();
+    }
+
 
 //actual middleware coding - 1
 const logger = store => next => action => {
@@ -138,51 +169,57 @@ const logger = store => next => action => {
   console.log(action.type);
   //ここでログイン情報を取れることを確認する
   if(action.login){
-  	console.log(store.getState().login[0].usr);
-  	const usr = store.getState().login[0].usr;
-  	const pas = store.getState().login[0].pas;
-  	var aleartToken = function(){
-  		console.log('triggering setToken function');
-  		//ここに、Storeへトークンを追加するための新しいアクションを追加する
-  		next(action.success(usr, authtoken));
-  		setTimeout(function(){
-  			//このやり方は結構最悪のやり方。一旦文字列に落としてからpropsから引き出し、再度JSONとして処理する。気が狂っている
-  			//配列をStateに登録し、その都度全部を塗り替えるような方法を探すべきである
-  			//またstoreを直接いじりに行くのもご法度。基本的にはthunk, sagaを利用するべき
-  			//これらはリリース後に残課題として対応。やれやれ…
-  			store.dispatch(setTicket(tickets))
-  		}, 3000)
-  	}
-  	SignIn(usr, pas);
-  	setTimeout(aleartToken, 2000);
+    //20200504
+    dispLoading('よみこみ中');
+    console.log(store.getState().login[0].usr);
+    const usr = store.getState().login[0].usr;
+    const pas = store.getState().login[0].pas;
+    var aleartToken = function(){
+      console.log('triggering setToken function');
+      //ここに、Storeへトークンを追加するための新しいアクションを追加する
+      next(action.success(usr, authtoken));
+      setTimeout(function(){
+        //このやり方は結構最悪のやり方。一旦文字列に落としてからpropsから引き出し、再度JSONとして処理する。気が狂っている
+        //配列をStateに登録し、その都度全部を塗り替えるような方法を探すべきである
+        //またstoreを直接いじりに行くのもご法度。基本的にはthunk, sagaを利用するべき
+        //これらはリリース後に残課題として対応。やれやれ…
+        store.dispatch(setTicket(tickets))
+        //20200504
+        removeLoading();
+      }, 3000)
+    }
+    SignIn(usr, pas);
+    setTimeout(aleartToken, 2000);
   //ここの分岐がなぜか発生しない。他のパラメータで試してみる
   }else if(action.type === "ADD_TODO"){
-  	const token = store.getState().login[0].token;
-  	const usr = store.getState().login[0].usr;
-  	const temp = store.getState().todos[0].temp;
-  	const Comment = store.getState().todos[0].Comment;
-  	console.log('triggering putTicket function');
-  	putTicket(temp, Comment, usr, token);
-  	getTickets(token, usr);
-  	console.log(JSON.stringify(tickets));
-  	setTimeout(function(){
-  			//このやり方は結構最悪のやり方。一旦文字列に落としてからpropsから引き出し、再度JSONとして処理する。気が狂っている
-  			//配列をStateに登録し、その都度全部を塗り替えるような方法を探すべきである
-  			//またstoreを直接いじりに行くのもご法度。基本的にはthunk, sagaを利用するべき
-  			//これらはリリース後に残課題として対応。やれやれ…
-  			store.dispatch(setTicket(tickets))
-  		}, 3000)
+    dispLoading('データを送っています…');
+    const token = store.getState().login[0].token;
+    const usr = store.getState().login[0].usr;
+    const temp = store.getState().todos[0].temp;
+    const Comment = store.getState().todos[0].Comment;
+    console.log('triggering putTicket function');
+    putTicket(temp, Comment, usr, token);
+    getTickets(token, usr);
+    console.log(JSON.stringify(tickets));
+    setTimeout(function(){
+        //このやり方は結構最悪のやり方。一旦文字列に落としてからpropsから引き出し、再度JSONとして処理する。気が狂っている
+        //配列をStateに登録し、その都度全部を塗り替えるような方法を探すべきである
+        //またstoreを直接いじりに行くのもご法度。基本的にはthunk, sagaを利用するべき
+        //これらはリリース後に残課題として対応。やれやれ…
+        store.dispatch(setTicket(tickets))
+        removeLoading();
+      }, 3000)
   }
   //else if(action.type === "SET_TOKEN"){
-  		//ここに設定されたトークンとユーザーネームで最新のチケットを登録するアクションにつなぐ
-  		//console.log('trigerring getTicket function');
-  		//getTickets(authtoken, store.getState().login[0].usr);
-  		//var alertTickets = function(){
-  		//	next(action.success(tickets));
-  		//	console.log('tickets are' + tickets);
-  		//}
-  		//setTimeout(alertTickets, 2000);
-  	//}
+      //ここに設定されたトークンとユーザーネームで最新のチケットを登録するアクションにつなぐ
+      //console.log('trigerring getTicket function');
+      //getTickets(authtoken, store.getState().login[0].usr);
+      //var alertTickets = function(){
+      //  next(action.success(tickets));
+      //  console.log('tickets are' + tickets);
+      //}
+      //setTimeout(alertTickets, 2000);
+    //}
   };
 
 
@@ -191,13 +228,13 @@ const logger = store => next => action => {
   //ここでログイン情報を取れることを確認する
   //console.log(action);
   //if(action.type === "SET_TOKEN"){
-  	//console.log(tickets + authtoken);
-  	//var alertTickets = function(){
-  		//console.log('triggering setTicket function');
-  		//ここに、Storeへトークンを追加するための新しいアクションを追加する
-  		//next(action.success(tickets));
-  	//}
-  	//setTimeout(alertTickets, 2000);
+    //console.log(tickets + authtoken);
+    //var alertTickets = function(){
+      //console.log('triggering setTicket function');
+      //ここに、Storeへトークンを追加するための新しいアクションを追加する
+      //next(action.success(tickets));
+    //}
+    //setTimeout(alertTickets, 2000);
   //ここの分岐がなぜか発生しない。他のパラメータで試してみる
   //}
  //}
