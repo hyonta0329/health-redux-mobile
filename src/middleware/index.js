@@ -17,33 +17,6 @@ const userPool = new CognitoUserPool({
 })
 var authtoken = '';
 
-function SignIn(usr, pas){
-    const authenticationDetails = new AuthenticationDetails({
-        Username : usr,
-        Password : pas
-    })
-    const cognitoUser = new CognitoUser({
-        Username : usr,
-        Pool : userPool
-    })
-    //20200504
-    //dispLoading('ログイン中…');
-    cognitoUser.authenticateUser(authenticationDetails, {
-        onSuccess: function (authresult) {
-            authtoken = authresult.getIdToken().getJwtToken();
-            window.alert('ログインしました');
-            //getTickets(authresult.getIdToken().getJwtToken(), usr);
-            return (authresult.getIdToken().getJwtToken());
-        }, onFailure: (err) => {
-            return(err);
-            console.log(err);
-            window.alert('ログインに失敗しました');
-            //removeLoading();
-
-        }
-    })
-}
-
 //function for sending tempinfo POST
 function putTicket(temp, comment, username, token){
   var date = new Date();
@@ -175,30 +148,39 @@ const logger = store => next => action => {
   console.log(action.type);
   //ここでログイン情報を取れることを確認する
   if(action.login){
-    //20200504
+    //20200507
     dispLoading('よみこみ中');
-    console.log(store.getState().login[0].usr);
     const usr = store.getState().login[0].usr;
     const pas = store.getState().login[0].pas;
-      console.log('triggering setToken function');
-      SignIn(usr, pas);
-      //ここに、Storeへトークンを追加するための新しいアクションを追加する
-      next(action.success(usr, authtoken));
-      setTimeout(function(){
-        setToken(authtoken);
-        setTimeout(
-          function(){
-            store.dispatch(setTicket(getTickets(authtoken, usr, setToken(authtoken))));
-            setTimeout(function(){
-              //storeを直接いじりに行くのもご法度。基本的にはthunk, sagaを利用するべき
-              //store.dispatch(setTicket(tickets))
-              //20200504
-              removeLoading();
-            }, 100)}
-        , 100)}
-      , 1800)
-    //SignIn(usr, pas);
-    //setTimeout(aleartToken, 2000);
+    const authenticationDetails = new AuthenticationDetails({
+      Username : usr,
+      Password : pas
+    })
+    const cognitoUser = new CognitoUser({
+      Username : usr,
+      Pool : userPool
+    })
+    cognitoUser.authenticateUser(authenticationDetails, {
+      onSuccess: function (authresult) {
+          var logintoken = authresult.getIdToken().getJwtToken();
+          authtoken = logintoken;
+          window.alert('ログインしました');
+          setTimeout(function(){
+            store.dispatch(setTicket(getTickets(logintoken, usr, (setToken(logintoken)))));
+            setTimeout(removeLoading(), 2000);
+          }, 500)
+          
+          //getTickets(authresult.getIdToken().getJwtToken(), usr);
+          //return (authresult.getIdToken().getJwtToken());
+          
+      }, onFailure: (err) => {
+          return(err);
+          console.log(err);
+          window.alert('ログインに失敗しました');
+          //removeLoading();
+
+      }
+    })
   }else if(action.type === "ADD_TODO"){
     dispLoading('データを更新しています…');
     const token = store.getState().login[0].token;
