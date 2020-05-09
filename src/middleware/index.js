@@ -138,6 +138,14 @@ function compare( a, b ){
       $("#loading").remove();
     }
 
+//Promise function definition
+function PromiseProcess(data){
+  return new Promise(function(callback){
+    setTimeout(function(){
+      callback(data);
+    }, 100);
+  });
+}
 
 //actual middleware coding - 1
 const logger = store => next => action => {
@@ -165,14 +173,25 @@ const logger = store => next => action => {
           var logintoken = authresult.getIdToken().getJwtToken();
           authtoken = logintoken;
           window.alert('ログインしました');
-          setTimeout(function(){
-            store.dispatch(setTicket(getTickets(logintoken, usr, (setToken(logintoken)))));
-            setTimeout(removeLoading(), 2000);
-          }, 500)
-          
-          //getTickets(authresult.getIdToken().getJwtToken(), usr);
-          //return (authresult.getIdToken().getJwtToken());
-          
+          PromiseProcess(logintoken).then((data) => {
+            console.log('this is...' + data);
+            return (data)
+          }).then((data) => {
+            console.log('revoking setToken function...');
+            return setToken(data);
+          }).then((data) =>{
+            console.log('revoking getTickets function...');
+            return getTickets(logintoken, usr, data);
+          }).then((data) => {
+            console.log('revoking setTicket function...');
+            return setTicket(data);
+          }).then((data) => {
+            return store.dispatch(data);
+          }).then((data) => {
+            console.log('End of function!');
+            removeLoading();
+          });
+
       }, onFailure: (err) => {
           return(err);
           console.log(err);
@@ -182,16 +201,32 @@ const logger = store => next => action => {
       }
     })
   }else if(action.type === "ADD_TODO"){
-    dispLoading('データを更新しています…');
+    dispLoading('おねつを登録しています…');
     const token = store.getState().login[0].token;
     const usr = store.getState().login[0].usr;
     const temp = store.getState().todos[0].temp;
     const Comment = store.getState().todos[0].Comment;
     console.log('triggering putTicket function');
-    store.dispatch(setTicket(getTickets(authtoken, usr, putTicket(temp, Comment, usr, authtoken))))
-    setTimeout(function(){
+    PromiseProcess(100).then((data)=>{
+      console.log(data);
+      console.log('putting ticket...');
+      return (putTicket(temp, Comment, usr, authtoken));
+    }).then((data) =>{
       removeLoading();
-      }, 500)
+      console.log('getting tickets...');
+      return (getTickets(authtoken, usr, data));
+    }).then((data)=>{
+      //dispLoading('データを更新しています...');
+      console.log('setting tickets...');
+      return (setTicket(data));
+    }).then((data) => {
+      console.log('dispatching...');
+      store.dispatch(data);
+    }).then((data)=>{
+      console.log('end of function!');
+      removeLoading();
+    })
+
   }
   };
 
